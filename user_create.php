@@ -14,6 +14,7 @@ $success = null;
 // Valores por defecto para repoblar el formulario
 $first_name  = '';
 $last_name   = '';
+$middle_name = '';
 $email       = '';
 $role_id     = '';
 $status      = 'active';
@@ -24,13 +25,14 @@ $roles = $conn->query($sql)->fetchAll(PDO::FETCH_ASSOC);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
-    $first_name = trim($_POST['first_name'] ?? '');
-    $last_name  = trim($_POST['last_name'] ?? '');
-    $email      = trim($_POST['email'] ?? '');
-    $password   = $_POST['password'] ?? '';
-    $password2  = $_POST['password_confirmation'] ?? '';
-    $role_id    = (int)($_POST['role_id'] ?? 0);
-    $status     = $_POST['status'] ?? 'active';
+    $first_name   = trim($_POST['first_name'] ?? '');
+    $last_name    = trim($_POST['last_name'] ?? '');
+    $middle_name  = trim($_POST['middle_name'] ?? '');
+    $email        = trim($_POST['email'] ?? '');
+    $password     = $_POST['password'] ?? '';
+    $password2    = $_POST['password_confirmation'] ?? '';
+    $role_id      = (int)($_POST['role_id'] ?? 0);
+    $status       = $_POST['status'] ?? 'active';
 
     // Validaciones básicas
     if ($first_name === '') {
@@ -38,7 +40,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($last_name === '') {
-        $errors[] = 'El apellido es obligatorio.';
+        $errors[] = 'El apellido paterno es obligatorio.';
     }
 
     if ($email === '') {
@@ -80,18 +82,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $passwordHash = password_hash($password, PASSWORD_DEFAULT);
 
         $sql = "INSERT INTO users
-                    (first_name, last_name, email, password, role_id, status)
+                    (first_name, last_name, middle_name, email, password, role_id, status)
                 VALUES
-                    (:first_name, :last_name, :email, :password, :role_id, :status)";
+                    (:first_name, :last_name, :middle_name, :email, :password, :role_id, :status)";
 
         $stmt = $conn->prepare($sql);
         $stmt->execute([
-            ':first_name' => $first_name,
-            ':last_name'  => $last_name,
-            ':email'      => $email,
-            ':password'   => $passwordHash,
-            ':role_id'    => $role_id,
-            ':status'     => $status,
+            ':first_name'  => $first_name,
+            ':last_name'   => $last_name,
+            ':middle_name' => $middle_name,
+            ':email'       => $email,
+            ':password'    => $passwordHash,
+            ':role_id'     => $role_id,
+            ':status'      => $status,
         ]);
 
         // Puedes redirigir directo o mostrar mensaje
@@ -131,7 +134,7 @@ include("partials/header.php");
     <form method="post" class="card p-4 shadow-sm">
 
         <div class="row">
-            <div class="mb-3 col-md-6">
+            <div class="mb-3 col-md-4">
                 <label for="first_name" class="form-label">Nombre</label>
                 <input
                     type="text"
@@ -143,14 +146,25 @@ include("partials/header.php");
                 >
             </div>
 
-            <div class="mb-3 col-md-6">
-                <label for="last_name" class="form-label">Apellido</label>
+            <div class="mb-3 col-md-4">
+                <label for="last_name" class="form-label">Apellido paterno</label>
                 <input
                     type="text"
                     id="last_name"
                     name="last_name"
                     class="form-control"
                     value="<?= htmlspecialchars($last_name) ?>"
+                    required>
+            </div>
+
+            <div class="mb-3 col-md-4">
+                <label for="middle_name" class="form-label">Apellido Materno</label>
+                <input
+                    type="text"
+                    id="middle_name"
+                    name="middle_name"
+                    class="form-control"
+                    value="<?= htmlspecialchars($middle_name) ?>"
                     required>
             </div>
         </div>

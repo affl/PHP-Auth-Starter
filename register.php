@@ -11,20 +11,22 @@ $errors = [];
 $success = null;
 
 // Valores para repoblar si hay error
-$first_name = '';
-$last_name  = '';
-$email      = '';
+$first_name   = '';
+$last_name    = '';
+$middle_name  = '';
+$email        = '';
 
 // ⚠️ Ajusta este valor al id real del rol 'dummy'
 $DUMMY_ROLE_ID = 3; 
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
-    $first_name = trim($_POST['first_name'] ?? '');
-    $last_name  = trim($_POST['last_name'] ?? '');
-    $email      = trim($_POST['email'] ?? '');
-    $password   = $_POST['password'] ?? '';
-    $password2  = $_POST['password_confirmation'] ?? '';
+    $first_name   = trim($_POST['first_name'] ?? '');
+    $last_name    = trim($_POST['last_name'] ?? '');
+    $middle_name  = trim($_POST['middle_name'] ?? '');
+    $email        = trim($_POST['email'] ?? '');
+    $password     = $_POST['password'] ?? '';
+    $password2    = $_POST['password_confirmation'] ?? '';
 
     // Validaciones
     if ($first_name === '') {
@@ -32,7 +34,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($last_name === '') {
-        $errors[] = 'El apellido es obligatorio.';
+        $errors[] = 'El apellido paterno es obligatorio.';
     }
 
     if ($email === '') {
@@ -66,18 +68,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $passwordHash = password_hash($password, PASSWORD_DEFAULT);
 
         $sql = "INSERT INTO users
-                    (first_name, last_name, email, password, role_id, status)
+                    (first_name, last_name, middle_name, email, password, role_id, status)
                 VALUES
-                    (:first_name, :last_name, :email, :password, :role_id, :status)";
+                    (:first_name, :last_name, :middle_name, :email, :password, :role_id, :status)";
 
         $stmt = $conn->prepare($sql);
         $stmt->execute([
-            ':first_name' => $first_name,
-            ':last_name'  => $last_name,
-            ':email'      => $email,
-            ':password'   => $passwordHash,
-            ':role_id'    => $DUMMY_ROLE_ID,
-            ':status'     => 'active',   // 👈 se activa automáticamente
+            ':first_name'  => $first_name,
+            ':last_name'   => $last_name,
+            ':middle_name' => $middle_name,
+            ':email'       => $email,
+            ':password'    => $passwordHash,
+            ':role_id'     => $DUMMY_ROLE_ID,
+            ':status'      => 'active',   // 👈 se activa automáticamente
         ]);
 
         // Opción 1: mostrar mensaje y dejarlo en la misma página
@@ -128,21 +131,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 name="first_name"
                 class="form-control"
                 value="<?= htmlspecialchars($first_name) ?>"
-                required
-            >
+                required>
         </div>
 
         <div class="mb-3">
-            <label for="last_name" class="form-label">Apellido</label>
+            <label for="last_name" class="form-label">Apellido Paterno</label>
             <input
                 type="text"
                 id="last_name"
                 name="last_name"
                 class="form-control"
                 value="<?= htmlspecialchars($last_name) ?>"
-                required
-            >
+                required>
         </div>
+
+        <div class="mb-3">
+            <label for="middle_name" class="form-label">Apellido Materno</label>
+            <input
+                type="text"
+                id="middle_name"
+                name="middle_name"
+                class="form-control"
+                value="<?= htmlspecialchars($middle_name) ?>">
+        </div> 
 
         <div class="mb-3">
             <label for="email" class="form-label">Correo electrónico</label>
@@ -152,8 +163,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 name="email"
                 class="form-control"
                 value="<?= htmlspecialchars($email) ?>"
-                required
-            >
+                required>
         </div>
 
         <div class="mb-3">
@@ -163,8 +173,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 id="password"
                 name="password"
                 class="form-control"
-                required
-            >
+                required>
             <div class="form-text">Mínimo 8 caracteres.</div>
         </div>
 
@@ -175,8 +184,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 id="password_confirmation"
                 name="password_confirmation"
                 class="form-control"
-                required
-            >
+                required>
         </div>
 
         <div class="d-flex justify-content-between">

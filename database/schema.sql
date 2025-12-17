@@ -23,6 +23,7 @@ CREATE TABLE users (
   password VARCHAR(255) NOT NULL,
   role_id INT UNSIGNED NOT NULL,
   status ENUM('active','inactive') NOT NULL DEFAULT 'active',
+  avatar VARCHAR(255) NULL;
   remember_token_hash VARCHAR(255) DEFAULT NULL,
   remember_token_expires_at DATETIME DEFAULT NULL,
   created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,

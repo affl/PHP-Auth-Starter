@@ -12,7 +12,7 @@
 <?php include("partials/header.php"); ?>
     <div class="container">
         <div class="d-flex justify-content-between align-items-center mb-3">
-            <h1 class="mb-0">Registrar nuevo usuario</h1>
+            <h1 class="mb-0">Registrar nuevo proyecto</h1>
         </div>
 
         <div class="row">

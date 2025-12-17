@@ -33,6 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $password2    = $_POST['password_confirmation'] ?? '';
     $role_id      = (int)($_POST['role_id'] ?? 0);
     $status       = $_POST['status'] ?? 'active';
+    $avatarPath = null; // lo que se guardará en BD (NULL si no sube nada)
 
     // Validaciones básicas
     if ($first_name === '') {
@@ -77,34 +78,104 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
+    // ---- Avatar (opcional) ----
+    if (isset($_FILES['avatar']) && $_FILES['avatar']['error'] !== UPLOAD_ERR_NO_FILE) {
+
+        if ($_FILES['avatar']['error'] !== UPLOAD_ERR_OK) {
+            $errors[] = 'Ocurrió un error al subir el avatar.';
+        } else {
+            $maxBytes = 2 * 1024 * 1024; // 2MB
+            if ($_FILES['avatar']['size'] > $maxBytes) {
+                $errors[] = 'El avatar excede el tamaño máximo permitido (2MB).';
+            } else {
+                $tmpPath = $_FILES['avatar']['tmp_name'];
+
+                $finfo = new finfo(FILEINFO_MIME_TYPE);
+                $mime  = $finfo->file($tmpPath);
+
+                $allowed = [
+                    'image/jpeg' => 'jpg',
+                    'image/png'  => 'png',
+                    'image/webp' => 'webp',
+                ];
+
+                if (!isset($allowed[$mime])) {
+                    $errors[] = 'Formato de avatar no permitido. Usa JPG, PNG o WEBP.';
+                } else {
+                    // Guardamos info para moverla DESPUÉS del insert
+                    $avatarPending = [
+                        'tmp' => $tmpPath,
+                        'ext' => $allowed[$mime],
+                    ];
+                }
+            }
+        }
+    }
+   
+
     // Si todo OK → insertar
     if (empty($errors)) {
         $passwordHash = password_hash($password, PASSWORD_DEFAULT);
 
-        $sql = "INSERT INTO users
-                    (first_name, last_name, middle_name, email, password, role_id, status)
-                VALUES
-                    (:first_name, :last_name, :middle_name, :email, :password, :role_id, :status)";
+        try {
+            $conn->beginTransaction();
 
-        $stmt = $conn->prepare($sql);
-        $stmt->execute([
-            ':first_name'  => $first_name,
-            ':last_name'   => $last_name,
-            ':middle_name' => $middle_name,
-            ':email'       => $email,
-            ':password'    => $passwordHash,
-            ':role_id'     => $role_id,
-            ':status'      => $status,
-        ]);
+            // 1) Insertar usuario SIN avatar (NULL)
+            $sql = "INSERT INTO users
+                        (first_name, last_name, middle_name, email, password, role_id, status, avatar)
+                    VALUES
+                        (:first_name, :last_name, :middle_name, :email, :password, :role_id, :status, NULL)";
 
-        // Puedes redirigir directo o mostrar mensaje
-        // redirect('admin_users.php');
-        $success = 'Usuario registrado correctamente.';
-        // Limpiar campos del formulario
-        $first_name = $last_name = $email = '';
-        $role_id = '';
-        $status = 'active';
+            $stmt = $conn->prepare($sql);
+            $stmt->execute([
+                ':first_name'  => $first_name,
+                ':last_name'   => $last_name,
+                ':middle_name' => $middle_name,
+                ':email'       => $email,
+                ':password'    => $passwordHash,
+                ':role_id'     => $role_id,
+                ':status'      => $status,
+            ]);
+
+            $userId = (int)$conn->lastInsertId();
+
+            // 2) Si hay avatar, ahora sí moverlo y actualizar BD
+            if ($avatarPending) {
+                $uploadDir = __DIR__ . '/uploads/avatars';
+                if (!is_dir($uploadDir)) {
+                    mkdir($uploadDir, 0755, true);
+                }
+
+                $filename = "user_{$userId}." . $avatarPending['ext'];
+                $dest = $uploadDir . '/' . $filename;
+
+                if (!move_uploaded_file($avatarPending['tmp'], $dest)) {
+                    throw new Exception('No se pudo guardar el avatar en el servidor.');
+                }
+
+                $avatarPath = 'uploads/avatars/' . $filename;
+
+                $sql = "UPDATE users SET avatar = :avatar WHERE id = :id";
+                $stmt = $conn->prepare($sql);
+                $stmt->execute([
+                    ':avatar' => $avatarPath,
+                    ':id'     => $userId,
+                ]);
+            }
+
+            $conn->commit();
+
+            $success = 'Usuario registrado correctamente.';
+            $first_name = $last_name = $email = '';
+            $role_id = '';
+            $status = 'active';
+
+        } catch (Throwable $e) {
+            if ($conn->inTransaction()) $conn->rollBack();
+            $errors[] = 'No se pudo registrar el usuario. Intenta nuevamente.';
+        }
     }
+    
 }
 include("partials/header.php");
 ?>
@@ -131,7 +202,7 @@ include("partials/header.php");
         </div>
     <?php endif; ?>
 
-    <form method="post" class="card p-4 shadow-sm">
+    <form method="post" enctype="multipart/form-data" class="card p-4 shadow-sm">
 
         <div class="row">
             <div class="mb-3 col-md-4">
@@ -169,15 +240,30 @@ include("partials/header.php");
             </div>
         </div>
 
-        <div class="mb-3">
-            <label for="email" class="form-label">Correo electrónico</label>
-            <input
-                type="email"
-                id="email"
-                name="email"
-                class="form-control"
-                value="<?= htmlspecialchars($email) ?>"
-                required>
+        <div class="row">
+            <div class="mb-3 col-md-8">
+                <label for="email" class="form-label">Correo electrónico</label>
+                <input
+                    type="email"
+                    id="email"
+                    name="email"
+                    class="form-control"
+                    value="<?= htmlspecialchars($email) ?>"
+                    required>
+            </div>
+
+            <div class="mb-3 col-md-4">
+                <label for="avatar" class="form-label">Avatar (opcional)</label>
+                <input
+                    type="file"
+                    id="avatar"
+                    name="avatar"
+                    class="form-control"
+                    accept="image/png,image/jpeg,image/webp">
+                <div class="form-text">
+                    Formatos: JPG, PNG o WEBP. (recomendado: cuadrada)
+                </div>
+            </div>
         </div>
 
         <div class="row">

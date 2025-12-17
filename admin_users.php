@@ -12,14 +12,17 @@ $search = trim($_GET['search'] ?? '');
 
 // Si hay búsqueda, armamos un SELECT con WHERE
 if ($search !== '') {
-    $sql = "SELECT u.id, u.first_name, u.last_name, u.email, u.status, r.name AS role_name
+    $sql = "SELECT u.id, u.first_name, u.last_name, u.middle_name, u.email, u.status, r.name AS role_name
             FROM users u
             LEFT JOIN roles r ON u.role_id = r.id
             WHERE 
-                u.first_name LIKE :term
-                OR u.last_name LIKE :term
-                OR u.email LIKE :term
-                OR r.name LIKE :term
+                u.role_id != 1
+                AND (
+                    u.first_name LIKE :term
+                    OR u.last_name LIKE :term
+                    OR u.email LIKE :term
+                    OR r.name LIKE :term
+                )
             ORDER BY u.id ASC";
 
     $stmt = $conn->prepare($sql);
@@ -28,9 +31,11 @@ if ($search !== '') {
     ]);
 } else {
     // Consulta original sin filtro
-    $sql = "SELECT u.id, u.first_name, u.last_name, u.email, u.status, r.name AS role_name
+    $sql = "SELECT u.id, u.first_name, u.last_name, u.middle_name, u.email, u.status, r.name AS role_name
             FROM users u
             LEFT JOIN roles r ON u.role_id = r.id
+            WHERE
+                u.role_id != 1
             ORDER BY u.id ASC";
 
     $stmt = $conn->query($sql);
@@ -74,7 +79,7 @@ include("partials/header.php");
                 <th>Email</th>
                 <th>Rol</th>
                 <th>Estatus</th>
-                <th class="text-end">Acciones</th>
+                <th class="text-center">Acciones</th>
             </tr>
         </thead>
 
@@ -84,7 +89,7 @@ include("partials/header.php");
                     <td><?= htmlspecialchars($user['id']) ?></td>
 
                     <td>
-                        <?= htmlspecialchars($user['first_name'] . ' ' . $user['last_name']) ?>
+                        <?= htmlspecialchars($user['first_name'] . ' ' . $user['last_name']. ' ' . $user['middle_name']) ?>
                     </td>
 
                     <td><?= htmlspecialchars($user['email']) ?></td>
@@ -102,41 +107,37 @@ include("partials/header.php");
                             <span class="badge bg-danger">Baja</span>
                         <?php endif; ?>
                     </td>
-                    <td class="text-end">
-                        <?php if ($user['id'] != $currentUserId): ?>
+                    <td class="text-center">
+                        <a href="user_edit.php?id=<?= $user['id'] ?>" 
+                        class="btn btn-sm btn-warning">
+                        Editar
+                        </a>
 
-                            <a href="user_edit.php?id=<?= $user['id'] ?>" 
-                            class="btn btn-sm btn-warning">
-                            Editar
-                            </a>
+                        <?php if ($user['status'] === 'active'): ?>
+                            <!-- Botón DAR DE BAJA -->
+                            <button
+                                type="button"
+                                class="btn btn-sm btn-outline-danger"
+                                data-bs-toggle="modal"
+                                data-bs-target="#statusModal"
+                                data-user-id="<?= $user['id'] ?>"
+                                data-user-name="<?= htmlspecialchars($user['first_name'] . ' ' . $user['last_name']) ?>"
+                                data-action="deactivate">
+                                Dar de baja
+                            </button>
 
-                            <?php if ($user['status'] === 'active'): ?>
-                                <!-- Botón DAR DE BAJA -->
-                                <button
-                                    type="button"
-                                    class="btn btn-sm btn-outline-danger"
-                                    data-bs-toggle="modal"
-                                    data-bs-target="#statusModal"
-                                    data-user-id="<?= $user['id'] ?>"
-                                    data-user-name="<?= htmlspecialchars($user['first_name'] . ' ' . $user['last_name']) ?>"
-                                    data-action="deactivate">
-                                    Dar de baja
-                                </button>
-
-                            <?php else: ?>
-                                <!-- Botón REACTIVAR -->
-                                <button
-                                    type="button"
-                                    class="btn btn-sm btn-outline-success"
-                                    data-bs-toggle="modal"
-                                    data-bs-target="#statusModal"
-                                    data-user-id="<?= $user['id'] ?>"
-                                    data-user-name="<?= htmlspecialchars($user['first_name'] . ' ' . $user['last_name']) ?>"
-                                    data-action="activate">
-                                    Reactivar
-                                </button>
-                            <?php endif; ?>
-
+                        <?php else: ?>
+                            <!-- Botón REACTIVAR -->
+                            <button
+                                type="button"
+                                class="btn btn-sm btn-outline-success"
+                                data-bs-toggle="modal"
+                                data-bs-target="#statusModal"
+                                data-user-id="<?= $user['id'] ?>"
+                                data-user-name="<?= htmlspecialchars($user['first_name'] . ' ' . $user['last_name']) ?>"
+                                data-action="activate">
+                                Reactivar
+                            </button>
                         <?php endif; ?>
                     </td>
                 </tr>

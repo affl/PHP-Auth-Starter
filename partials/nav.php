@@ -1,3 +1,10 @@
+<?php
+    $defaultAvatar = 'uploads/avatars/default.png';
+    $user = getUserById($_SESSION['user_id']);
+    $avatar = !empty($user['avatar'])
+        ? $user['avatar']
+        : $defaultAvatar;
+?>
 <nav class="navbar navbar-expand-lg bg-white shadow-sm px-4 mb-4">
     <div class="container-fluid">
 
@@ -12,7 +19,7 @@
         </a>
 
         <!-- Botones del menú -->
-        <div class="ms-auto">
+        <div class="ms-auto d-flex align-items-center gap-2">
             <a href="home.php" class="btn btn-outline-primary me-1">Home</a>
 
             <?php if (userHasRole('admin')): ?>
@@ -23,8 +30,42 @@
                 <a href="portafolio.php" class="btn btn-outline-primary me-1">Portafolio</a>
             <?php endif; ?>
 
-            <a href="logout.php" class="btn btn-outline-danger">Cerrar sesión</a>
-        </div>
+            <!-- Avatar + menú contextual -->
+            <div class="dropdown d-inline-block ms-3">
+                <a href="#"
+                class="d-flex align-items-center text-decoration-none dropdown-toggle"
+                id="userMenu"
+                data-bs-toggle="dropdown"
+                aria-expanded="false">
 
+                    <img src="<?= htmlspecialchars($avatar) ?>"
+                        alt="Avatar"
+                        width="40"
+                        height="40"
+                        class="rounded-circle border">
+                </a>
+
+                <ul class="dropdown-menu dropdown-menu-end shadow-sm" aria-labelledby="userMenu">
+                    <li class="px-3 py-2">
+                        <strong><?= htmlspecialchars($user['first_name']) ?></strong><br>
+                        <small class="text-muted"><?= htmlspecialchars($user['role_description']) ?></small>
+                    </li>
+
+                    <li><hr class="dropdown-divider"></li>
+
+                    <li>
+                        <a class="dropdown-item" href="profile.php">
+                            <i class="bi bi-person me-2"></i> Editar perfil
+                        </a>
+                    </li>
+
+                    <li>
+                        <a class="dropdown-item text-danger" href="logout.php">
+                            <i class="bi bi-box-arrow-right me-2"></i> Cerrar sesión
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
     </div>
 </nav>
